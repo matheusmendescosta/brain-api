@@ -1,0 +1,60 @@
+version: '3.7'
+
+services:
+  mysql:
+    container_name: mysql
+    image: mysql
+    restart: always
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_USER: dev
+      MYSQL_PASSWORD: 12345678A
+      MYSQL_ROOT_PASSWORD: 12345678A
+    volumes:
+      - mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      interval: 5s
+      retries: 5
+      start_period: 20s
+      timeout: 10s
+    networks:
+      - api-network 
+
+  web:
+    stdin_open: true
+    tty: true
+    container_name: api-brain
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        PORT: 3020
+    volumes:
+      - ./:/opt/app
+    depends_on:
+      mysql:
+        condition: service_healthy 
+    ports:
+      - '3020:3020'
+      - '5555:5555'
+    environment:
+      PORT: 3020
+    healthcheck:
+      test: curl --fail backend:3020/health || exit 1
+      interval: 5s
+      retries: 5
+      start_period: 20s
+      timeout: 10s
+    networks:
+      - api-network
+
+networks:
+  api-network:
+    name: api-network
+    driver: bridge
+
+volumes:
+  mysql:
+  
